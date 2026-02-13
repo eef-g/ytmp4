@@ -19,8 +19,22 @@ A simple, ad-free, self-hosted short-form video downloader for YouTube, Instagra
 
 ## Quick Start
 
+### Deploy on any machine (no source code needed)
+
 ```bash
-docker-compose up --build
+curl -O https://raw.githubusercontent.com/eef-g/ytmp4/master/deploy.sh
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The script installs Docker if missing, pulls the pre-built images from GHCR, and starts the app.
+
+### Build from source
+
+```bash
+git clone https://github.com/eef-g/ytmp4.git
+cd ytmp4
+docker compose up --build
 ```
 
 Open [http://localhost:8080](http://localhost:8080), paste a link, and download.

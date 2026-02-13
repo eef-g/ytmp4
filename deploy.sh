@@ -3,13 +3,14 @@ set -euo pipefail
 
 # ──────────────────────────────────────────────
 # ytmp4 deploy script for Ubuntu Server
-# Installs Docker if needed, then builds & runs
+# Installs Docker if needed, pulls GHCR images & runs
 # ──────────────────────────────────────────────
 
-APP_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DEPLOY_DIR="${YTMP4_DIR:-$SCRIPT_DIR}"
 
 echo "==> ytmp4 deployment starting..."
-echo "    App directory: $APP_DIR"
+echo "    Deploy directory: $DEPLOY_DIR"
 
 # ── 1. Install Docker & Docker Compose if missing ──
 
@@ -37,40 +38,79 @@ else
     echo "==> Docker already installed."
 fi
 
-# ── 2. Create .env from example if it doesn't exist ──
+# ── 2. Create deploy directory and docker-compose.yml ──
 
-if [ ! -f "$APP_DIR/.env" ]; then
-    echo "==> Creating .env from .env.example (edit to customize)..."
-    cp "$APP_DIR/.env.example" "$APP_DIR/.env"
+mkdir -p "$DEPLOY_DIR"
+cd "$DEPLOY_DIR"
+
+if [ ! -f "$DEPLOY_DIR/docker-compose.yml" ]; then
+    echo "==> Creating docker-compose.yml with GHCR images..."
+    cat > "$DEPLOY_DIR/docker-compose.yml" <<'COMPOSE'
+services:
+  backend:
+    image: ghcr.io/eef-g/ytmp4-backend:latest
+    environment:
+      - YTMP4_DOWNLOAD_DIR=/app/downloads
+      - YTMP4_CLEANUP_INTERVAL_MINUTES=${CLEANUP_INTERVAL_MINUTES:-60}
+      - YTMP4_MAX_CONCURRENT_DOWNLOADS=${MAX_CONCURRENT_DOWNLOADS:-3}
+    volumes:
+      - downloads:/app/downloads
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/eef-g/ytmp4-frontend:latest
+    ports:
+      - "${PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  downloads:
+COMPOSE
+else
+    echo "==> docker-compose.yml already exists, keeping current config."
+fi
+
+# ── 3. Create .env if it doesn't exist ──
+
+if [ ! -f "$DEPLOY_DIR/.env" ]; then
+    echo "==> Creating default .env (edit to customize)..."
+    cat > "$DEPLOY_DIR/.env" <<'ENV'
+PORT=8080
+CLEANUP_INTERVAL_MINUTES=60
+MAX_CONCURRENT_DOWNLOADS=3
+ENV
 else
     echo "==> .env already exists, keeping current config."
 fi
 
-# ── 3. Build and start containers ──
+# ── 4. Pull and start containers ──
 
-echo "==> Building and starting containers..."
-cd "$APP_DIR"
+echo "==> Pulling latest images and starting containers..."
 
 # Use sudo if user is not yet in the docker group this session
 if groups | grep -q '\bdocker\b'; then
-    docker compose up --build -d
+    docker compose pull
+    docker compose up -d
 else
     echo "    (using sudo — re-login after deploy to run docker without sudo)"
-    sudo docker compose up --build -d
+    sudo docker compose pull
+    sudo docker compose up -d
 fi
 
-# ── 4. Show status ──
+# ── 5. Show status ──
 
 echo ""
 echo "==> Deployment complete!"
 echo ""
 
-PORT=$(grep -E '^PORT=' "$APP_DIR/.env" 2>/dev/null | cut -d= -f2)
+PORT=$(grep -E '^PORT=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2)
 PORT=${PORT:-8080}
 
 echo "    ytmp4 is running at: http://$(hostname -I | awk '{print $1}'):$PORT"
 echo ""
-echo "    Useful commands:"
-echo "      docker compose logs -f        # view logs"
-echo "      docker compose down            # stop"
-echo "      docker compose up --build -d   # rebuild & restart"
+echo "    Useful commands (from $DEPLOY_DIR):"
+echo "      docker compose logs -f      # view logs"
+echo "      docker compose down         # stop"
+echo "      docker compose pull && docker compose up -d  # update & restart"
