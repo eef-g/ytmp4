@@ -1,0 +1,23 @@
+# Use this file to run ytmp4 from pre-built GHCR images (no source code needed).
+# docker compose -f docker-compose.ghcr.yml up -d
+services:
+  backend:
+    image: ghcr.io/eef-g/ytmp4-backend:latest
+    environment:
+      - YTMP4_DOWNLOAD_DIR=/app/downloads
+      - YTMP4_CLEANUP_INTERVAL_MINUTES=${CLEANUP_INTERVAL_MINUTES:-60}
+      - YTMP4_MAX_CONCURRENT_DOWNLOADS=${MAX_CONCURRENT_DOWNLOADS:-3}
+    volumes:
+      - downloads:/app/downloads
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/eef-g/ytmp4-frontend:latest
+    ports:
+      - "${PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  downloads:
