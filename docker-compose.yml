@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      - YTMP4_DOWNLOAD_DIR=/app/downloads
+      - YTMP4_CLEANUP_INTERVAL_MINUTES=${CLEANUP_INTERVAL_MINUTES:-60}
+      - YTMP4_MAX_CONCURRENT_DOWNLOADS=${MAX_CONCURRENT_DOWNLOADS:-3}
+    volumes:
+      - downloads:/app/downloads
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  downloads:

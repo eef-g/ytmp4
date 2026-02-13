@@ -1,0 +1,40 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a2e;
+  --surface-hover: #222240;
+  --border: #2a2a4a;
+  --text: #e0e0e0;
+  --text-muted: #888;
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --success: #22c55e;
+  --error: #ef4444;
+  --progress-bg: #2a2a4a;
+  --progress-fill: #7c3aed;
+  --radius: 10px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font: inherit;
+}
+
+input {
+  font: inherit;
+}
